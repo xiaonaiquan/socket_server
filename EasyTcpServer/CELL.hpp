@@ -25,7 +25,7 @@
 //
 #include<stdio.h>
 
-//ปบณๅว๘ื๎ะกตฅิชด๓ะก
+//็ผ“ๅฒๅบๆ€ๅฐๅ•ๅ…ๅคงๅฐ
 #ifndef RECV_BUFF_SZIE
 #define RECV_BUFF_SZIE 10240
 #define SEND_BUFF_SZIE RECV_BUFF_SZIE

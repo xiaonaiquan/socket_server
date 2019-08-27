@@ -3,21 +3,21 @@
 
 #include"Cell.hpp"
 #include"CellClient.hpp"
-//×Ô¶¨Òå
+//è‡ªå®šä¹‰
 class CellServer;
 
-//ÍøÂçÊÂ¼ş½Ó¿Ú
+//ç½‘ç»œäº‹ä»¶æ¥å£
 class INetEvent
 {
 public:
-	//´¿Ğéº¯Êı
-	//¿Í»§¶Ë¼ÓÈëÊÂ¼ş
+	//çº¯è™šå‡½æ•°
+	//å®¢æˆ·ç«¯åŠ å…¥äº‹ä»¶
 	virtual void OnNetJoin(CellClient* pClient) = 0;
-	//¿Í»§¶ËÀë¿ªÊÂ¼ş
+	//å®¢æˆ·ç«¯ç¦»å¼€äº‹ä»¶
 	virtual void OnNetLeave(CellClient* pClient) = 0;
-	//¿Í»§¶ËÏûÏ¢ÊÂ¼ş
+	//å®¢æˆ·ç«¯æ¶ˆæ¯äº‹ä»¶
 	virtual void OnNetMsg(CellServer* pCellServer, CellClient* pClient, netmsg_DataHeader* header) = 0;
-	//recvÊÂ¼ş
+	//recväº‹ä»¶
 	virtual void OnNetRecv(CellClient* pClient) = 0;
 private:
 
