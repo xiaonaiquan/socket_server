@@ -1,5 +1,6 @@
 #include "EasyTcpServer.hpp"
-#include<thread>
+#include <thread>
+#include <iostream>
 
 bool g_bRun = true;
 void cmdThread()
@@ -78,7 +79,6 @@ private:
 
 int main()
 {
-
 	MyServer server;
 	server.InitSocket();
 	server.Bind(nullptr, 4567);

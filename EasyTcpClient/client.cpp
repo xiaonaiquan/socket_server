@@ -28,8 +28,8 @@ const int cCount = 1000;
 const int tCount = 4;
 //客户端数组
 EasyTcpClient* client[cCount];
-std::atomic_int sendCount = 0;
-std::atomic_int readyCount = 0;
+std::atomic_int sendCount{0};
+std::atomic_int readyCount{0};
 
 void recvThread(int begin, int end)
 {
@@ -60,7 +60,7 @@ void sendThread(int id)
 		//win7 "192.168.1.114" i7 2670qm
 		//127.0.0.1
 		//39.108.13.69 
-		client[n]->Connect("192.168.1.102", 4567);
+		client[n]->Connect("127.0.0.1", 4567);
 	}
 
 	printf("thread<%d>,Connect<begin=%d, end=%d>\n", id, begin, end);
