@@ -1,4 +1,4 @@
-#ifndef _EasyTcpServer_hpp_
+﻿#ifndef _EasyTcpServer_hpp_
 #define _EasyTcpServer_hpp_
 
 #include"CELL.hpp"
@@ -14,11 +14,14 @@
 class EasyTcpServer : public INetEvent
 {
 private:
-	SOCKET _sock;
+	//
+	CELLThread _thread;
 	//消息处理对象，内部会创建线程
-	std::vector<CellServer*> _cellServers;
+	std::vector<CELLServer*> _cellServers;
 	//每秒消息计时
 	CELLTimestamp _tTime;
+	//
+	SOCKET _sock;
 protected:
 	//SOCKET recv计数
 	std::atomic_int _recvCount;
@@ -47,18 +50,25 @@ public:
 		WSADATA dat;
 		WSAStartup(ver, &dat);
 #endif
+//
+#ifndef _WIN32
+		//if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
+		//	return (1);
+		//忽略异常信号，默认情况会导致进程终止
+		signal(SIGPIPE, SIG_IGN);
+#endif
 		if (INVALID_SOCKET != _sock)
 		{
-			printf("<socket=%d>关闭旧连接...\n", (int)_sock);
+			printf("warning, initSocket close old socket<%d>...\n", (int)_sock);
 			Close();
 		}
 		_sock = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 		if (INVALID_SOCKET == _sock)
 		{
-			printf("错误，建立socket失败...\n");
+			printf("error, create socket failed...\n");
 		}
 		else {
-			printf("建立socket=<%d>成功...\n", (int)_sock);
+			printf("create socket<%d> success...\n", (int)_sock);
 		}
 		return _sock;
 	}
@@ -93,10 +103,10 @@ public:
 		int ret = bind(_sock, (sockaddr*)&_sin, sizeof(_sin));
 		if (SOCKET_ERROR == ret)
 		{
-			printf("错误,绑定网络端口<%d>失败...\n", port);
+			printf("error, bind port<%d> failed...\n", port);
 		}
 		else {
-			printf("绑定网络端口<%d>成功...\n", port);
+			printf("bind port<%d> success...\n", port);
 		}
 		return ret;
 	}
@@ -108,10 +118,10 @@ public:
 		int ret = listen(_sock, n);
 		if (SOCKET_ERROR == ret)
 		{
-			printf("socket=<%d>错误,监听网络端口失败...\n",_sock);
+			printf("error, listen socket<%d> failed...\n",_sock);
 		}
 		else {
-			printf("socket=<%d>监听网络端口成功...\n", _sock);
+			printf("listen port<%d> success...\n", _sock);
 		}
 		return ret;
 	}
@@ -130,98 +140,128 @@ public:
 #endif
 		if (INVALID_SOCKET == cSock)
 		{
-			printf("socket=<%d>错误,接受到无效客户端SOCKET...\n", (int)_sock);
+			printf("error, accept INVALID_SOCKET...\n");
 		}
 		else
 		{
 			//将新客户端分配给客户数量最少的cellServer
-			addClientToCellServer(new CellClient(cSock));
+			addClientToCELLServer(new CELLClient(cSock));
 			//获取IP地址 inet_ntoa(clientAddr.sin_addr)
 		}
 		return cSock;
 	}
 	
-	void addClientToCellServer(CellClient* pClient)
+	void addClientToCELLServer(CELLClient* pClient)
 	{
-		//查找客户数量最少的CellServer消息处理对象
+		//查找客户数量最少的CELLServer消息处理对象
 		auto pMinServer = _cellServers[0];
-		for(auto pCellServer : _cellServers)
+		for(auto pServer : _cellServers)
 		{
-			if (pMinServer->getClientCount() > pCellServer->getClientCount())
+			if (pMinServer->getClientCount() > pServer->getClientCount())
 			{
-				pMinServer = pCellServer;
+				pMinServer = pServer;
 			}
 		}
 		pMinServer->addClient(pClient);
-		OnNetJoin(pClient);
 	}
 
-	void Start(int nCellServer)
+	void Start(int nCELLServer)
 	{
-		for (int n = 0; n < nCellServer; n++)
+		for (int n = 0; n < nCELLServer; n++)
 		{
-			auto ser = new CellServer(_sock);
+			auto ser = new CELLServer(n+1);
 			_cellServers.push_back(ser);
 			//注册网络事件接受对象
 			ser->setEventObj(this);
 			//启动消息处理线程
 			ser->Start();
 		}
+		_thread.Start(nullptr,
+			[this](CELLThread* pThread) {
+				OnRun(pThread);
+			});
 	}
 	//关闭Socket
 	void Close()
 	{
+		printf("EasyTcpServer.Close begin\n");
+		_thread.Close();
 		if (_sock != INVALID_SOCKET)
 		{
+			for (auto s : _cellServers)
+			{
+				delete s;
+			}
+			_cellServers.clear();
+			//关闭套节字socket
 #ifdef _WIN32
-			//关闭套节字closesocket
 			closesocket(_sock);
-			//------------
 			//清除Windows socket环境
 			WSACleanup();
 #else
-			//关闭套节字closesocket
 			close(_sock);
 #endif
+			_sock = INVALID_SOCKET;
 		}
+		printf("EasyTcpServer.Close end\n");
 	}
-	//处理网络消息
-	bool OnRun()
+
+	//cellServer 4 多个线程触发 不安全
+	//如果只开启1个cellServer就是安全的
+	virtual void OnNetJoin(CELLClient* pClient)
 	{
-		if (isRun())
+		_clientCount++;
+		//printf("client<%d> join\n", pClient->sockfd());
+	}
+	//cellServer 4 多个线程触发 不安全
+	//如果只开启1个cellServer就是安全的
+	virtual void OnNetLeave(CELLClient* pClient)
+	{
+		_clientCount--;
+		//printf("client<%d> leave\n", pClient->sockfd());
+	}
+	//cellServer 4 多个线程触发 不安全
+	//如果只开启1个cellServer就是安全的
+	virtual void OnNetMsg(CELLServer* pServer, CELLClient* pClient, netmsg_DataHeader* header)
+	{
+		_msgCount++;
+	}
+
+	virtual void OnNetRecv(CELLClient* pClient)
+	{
+		_recvCount++;
+		//printf("client<%d> leave\n", pClient->sockfd());
+	}
+private:
+	//处理网络消息
+	void OnRun(CELLThread* pThread)
+	{
+		while (pThread->isRun())
 		{
 			time4msg();
 			//伯克利套接字 BSD socket
 			fd_set fdRead;//描述符（socket） 集合
-			//清理集合
+						  //清理集合
 			FD_ZERO(&fdRead);
 			//将描述符（socket）加入集合
 			FD_SET(_sock, &fdRead);
 			///nfds 是一个整数值 是指fd_set集合中所有描述符(socket)的范围，而不是数量
 			///既是所有文件描述符最大值+1 在Windows中这个参数可以写0
-			timeval t = { 0,10};
+			timeval t = { 0, 1};
 			int ret = select(_sock + 1, &fdRead, 0, 0, &t); //
 			if (ret < 0)
 			{
-				printf("Accept Select任务结束。\n");
-				Close();
-				return false;
+				printf("EasyTcpServer.OnRun select exit.\n");
+				pThread->Exit();
+				break;
 			}
 			//判断描述符（socket）是否在集合中
 			if (FD_ISSET(_sock, &fdRead))
 			{
 				FD_CLR(_sock, &fdRead);
 				Accept();
-				return true;
 			}
-			return true;
 		}
-		return false;
-	}
-	//是否工作中
-	bool isRun()
-	{
-		return _sock != INVALID_SOCKET;
 	}
 
 	//计算并输出每秒收到的网络消息
@@ -230,36 +270,11 @@ public:
 		auto t1 = _tTime.getElapsedSecond();
 		if (t1 >= 1.0)
 		{
-			printf("thread<%d>,time<%lf>,socket<%d>,clients<%d>,recv<%d>,msg<%d>\n", (int)_cellServers.size(), t1, _sock,(int)_clientCount, (int)(_recvCount/ t1), (int)(_msgCount / t1));
+			printf("thread<%d>,time<%lf>,socket<%d>,clients<%d>,recv<%d>,msg<%d>\n", (int)_cellServers.size(), t1, _sock, (int)_clientCount, (int)(_recvCount / t1), (int)(_msgCount / t1));
 			_recvCount = 0;
 			_msgCount = 0;
 			_tTime.update();
 		}
-	}
-	//只会被一个线程触发 安全
-	virtual void OnNetJoin(CellClient* pClient)
-	{
-		_clientCount++;
-		//printf("client<%d> join\n", pClient->sockfd());
-	}
-	//cellServer 4 多个线程触发 不安全
-	//如果只开启1个cellServer就是安全的
-	virtual void OnNetLeave(CellClient* pClient)
-	{
-		_clientCount--;
-		//printf("client<%d> leave\n", pClient->sockfd());
-	}
-	//cellServer 4 多个线程触发 不安全
-	//如果只开启1个cellServer就是安全的
-	virtual void OnNetMsg(CellServer* pCellServer, CellClient* pClient, netmsg_DataHeader* header)
-	{
-		_msgCount++;
-	}
-
-	virtual void OnNetRecv(CellClient* pClient)
-	{
-		_recvCount++;
-		//printf("client<%d> leave\n", pClient->sockfd());
 	}
 };
 

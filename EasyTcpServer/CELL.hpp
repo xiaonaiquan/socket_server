@@ -1,4 +1,4 @@
-#ifndef _CELL_HPP_
+﻿#ifndef _CELL_HPP_
 #define _CELL_HPP_
 
 //SOCKET
@@ -13,6 +13,7 @@
 #include<unistd.h> //uni std
 #include<arpa/inet.h>
 #include<string.h>
+#include<signal.h>
 
 #define SOCKET int
 #define INVALID_SOCKET  (SOCKET)(~0)
@@ -27,8 +28,8 @@
 
 //缓冲区最小单元大小
 #ifndef RECV_BUFF_SZIE
-#define RECV_BUFF_SZIE 10240
-#define SEND_BUFF_SZIE RECV_BUFF_SZIE
+#define RECV_BUFF_SZIE 8192
+#define SEND_BUFF_SZIE 10240
 #endif // !RECV_BUFF_SZIE
 
 #endif // !_CELL_HPP_

@@ -28,13 +28,13 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v120</PlatformToolset>
+    <PlatformToolset>v140</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>Unicode</CharacterSet>
   </PropertyGroup>
@@ -160,8 +160,11 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="CELL.hpp" />
+    <ClInclude Include="CELLBuffer.hpp" />
     <ClInclude Include="CELLClient.hpp" />
+    <ClInclude Include="CELLSemaphore.hpp" />
     <ClInclude Include="CELLServer.hpp" />
+    <ClInclude Include="CELLThread.hpp" />
     <ClInclude Include="CELLTimestamp.hpp" />
     <ClInclude Include="INetEvent.hpp" />
     <ClInclude Include="MessageHeader.hpp" />
